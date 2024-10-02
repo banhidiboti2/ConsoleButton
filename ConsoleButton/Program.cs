@@ -19,25 +19,28 @@ class Program
         while (true)
         {
             Console.Clear();
+            int windowWidth = Console.WindowWidth;
+            int padding = (windowWidth - maxLength - 6) / 2; 
+
             for (int i = 0; i < menuItems.Length; i++)
             {
                 string paddedItem = menuItems[i].PadRight(maxLength);
 
+                Console.WriteLine(new string(' ', padding) + "------------------");
                 if (i == selectedIndex)
                 {
+                    Console.Write(new string(' ', padding) + "|  ");
                     Console.BackgroundColor = ConsoleColor.Gray;
                     Console.ForegroundColor = ConsoleColor.Black;
-                    Console.WriteLine("------------------");
-                    Console.WriteLine($"|  {paddedItem}  |");
-                    Console.WriteLine("------------------");
+                    Console.Write(paddedItem);
+                    Console.ResetColor();
+                    Console.WriteLine("  |");
                 }
                 else
                 {
-                    Console.WriteLine("------------------");
-                    Console.WriteLine($"|  {paddedItem}  |");
-                    Console.WriteLine("------------------");
+                    Console.WriteLine(new string(' ', padding) + $"|  {paddedItem}  |");
                 }
-                Console.ResetColor();
+                Console.WriteLine(new string(' ', padding) + "------------------");
             }
 
             var key = Console.ReadKey(true).Key;
@@ -57,9 +60,10 @@ class Program
                 case ConsoleKey.Enter:
                     Console.Clear();
                     Console.WriteLine($"Selected: {menuItems[selectedIndex]}");
-                    return;  
+                    return;
             }
-
         }
     }
 }
+
+//gomb korberajzolas egysegesen, kivalasztott gomb szine csak rajta
