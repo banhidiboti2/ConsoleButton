@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 class Program
 {
@@ -68,6 +69,14 @@ class Program
                     {
                         RunFirstOptionCode();
                     }
+                    else if (selectedIndex == 1)
+                    {
+                        SaveDrawing();
+                    }
+                    else if (selectedIndex == 2)
+                    {
+                        LoadDrawing();
+                    }
                     return;
             }
         } while (true);
@@ -75,13 +84,13 @@ class Program
 
     static void RunFirstOptionCode()
     {
-
         int x = 0, y = 0;
         ConsoleKey gomb;
         int ww = Console.WindowWidth;
         int wh = Console.WindowHeight;
         bool isRunning = true;
         char currentChar = '█';
+        ConsoleColor currentColor = ConsoleColor.Gray;
 
         do
         {
@@ -93,23 +102,26 @@ class Program
             if (gomb == ConsoleKey.LeftArrow && x > 0) x--;
             if (gomb == ConsoleKey.RightArrow && x < ww - 1) x++;
 
-
             switch (gomb)
             {
                 case ConsoleKey.D1:
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    currentColor = ConsoleColor.Red;
+                    Console.ForegroundColor = currentColor;
                     break;
 
                 case ConsoleKey.D2:
-                    Console.ForegroundColor = ConsoleColor.Green;
+                    currentColor = ConsoleColor.Green;
+                    Console.ForegroundColor = currentColor;
                     break;
 
                 case ConsoleKey.D3:
-                    Console.ForegroundColor = ConsoleColor.Blue;
+                    currentColor = ConsoleColor.Blue;
+                    Console.ForegroundColor = currentColor;
                     break;
 
                 case ConsoleKey.D4:
-                    Console.ForegroundColor = ConsoleColor.Gray;
+                    currentColor = ConsoleColor.Gray;
+                    Console.ForegroundColor = currentColor;
                     break;
                 case ConsoleKey.D5:
                     currentChar = '▓';
@@ -123,12 +135,20 @@ class Program
                     currentChar = '░';
                     break;
 
+                case ConsoleKey.D8:
+                    currentChar = '█';
+                    break;
+
                 case ConsoleKey.Spacebar:
                     Console.SetCursorPosition(x, y);
                     Console.Write(currentChar);
                     break;
             }
 
+            if (x == ww - 6 && y == wh - 1 && gomb == ConsoleKey.Enter)
+            {
+                SaveDrawing();
+            }
 
             if (gomb == ConsoleKey.Tab)
             {
@@ -153,6 +173,61 @@ class Program
                 isRunning = false;
             }
 
+            Console.SetCursorPosition(ww - 6, wh - 1);
+            Console.BackgroundColor = (x == ww - 6 && y == wh - 1) ? ConsoleColor.Gray : ConsoleColor.Black;
+            Console.ForegroundColor = (x == ww - 6 && y == wh - 1) ? ConsoleColor.Black : ConsoleColor.White;
+            Console.Write("Mentés");
+            Console.ResetColor();
+
+            Console.SetCursorPosition(0, wh - 1);
+            Console.ResetColor();
+            Console.Write($"Szín: {currentColor}, Karakter: {currentChar}   ");
+
         } while (isRunning);
+    }
+
+    static void SaveDrawing()
+    {
+        Console.SetCursorPosition(30, Console.WindowHeight - 1);
+        Console.WriteLine("Mentve");
+
+        using (StreamWriter writer = new StreamWriter("drawing.txt"))
+        {
+            for (int i = 0; i < Console.WindowHeight; i++)
+            {
+                for (int j = 0; j < Console.WindowWidth; j++)
+                {
+                    Console.SetCursorPosition(j, i);
+                    char c = (char)Console.Read();
+                    writer.Write(c);
+                }
+                writer.WriteLine();
+            }
+        }
+
+        Console.SetCursorPosition(0, Console.WindowHeight - 1);
+        Console.WriteLine("Elmentve");
+    }
+
+    static void LoadDrawing()
+    {
+        Console.Clear();
+
+        if (File.Exists("drawing.txt"))
+        {
+            string[] buffer = File.ReadAllLines("drawing.txt");
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                Console.SetCursorPosition(0, i);
+                Console.Write(buffer[i]);
+            }
+            Console.WriteLine(" ");
+            Console.WriteLine("Rajz betöltve.");
+        }
+        else
+        {
+            Console.WriteLine("Nincs mentett rajz.");
+        }
+        Console.ReadKey();
     }
 }
