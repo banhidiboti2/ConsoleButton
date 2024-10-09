@@ -71,11 +71,15 @@ class Program
                     }
                     else if (selectedIndex == 1)
                     {
-                        SaveDrawing();
+                        Console.WriteLine("Nincs mentett rajz.");
                     }
                     else if (selectedIndex == 2)
                     {
-                        LoadDrawing();
+                        char[,] drawing = LoadDrawing();
+                        if (drawing != null)
+                        {
+                            ContinueDrawing(drawing);
+                        }
                     }
                     return;
             }
@@ -91,6 +95,16 @@ class Program
         bool isRunning = true;
         char currentChar = '█';
         ConsoleColor currentColor = ConsoleColor.Gray;
+
+        // Create a 2D array to store the drawing
+        char[,] drawing = new char[wh, ww];
+        for (int i = 0; i < wh; i++)
+        {
+            for (int j = 0; j < ww; j++)
+            {
+                drawing[i, j] = ' ';
+            }
+        }
 
         do
         {
@@ -142,42 +156,21 @@ class Program
                 case ConsoleKey.Spacebar:
                     Console.SetCursorPosition(x, y);
                     Console.Write(currentChar);
+                    drawing[y, x] = currentChar; // Save the character to the drawing array
                     break;
-            }
-
-            if (x == ww - 6 && y == wh - 1 && gomb == ConsoleKey.Enter)
-            {
-                SaveDrawing();
-            }
-
-            if (gomb == ConsoleKey.Tab)
-            {
-                while (true)
-                {
-                    Console.SetCursorPosition(x, y);
-                    Console.Write('█');
-
-                    gomb = Console.ReadKey(true).Key;
-
-                    if (gomb == ConsoleKey.UpArrow && y > 0) y--;
-                    if (gomb == ConsoleKey.DownArrow && y < wh - 1) y++;
-                    if (gomb == ConsoleKey.LeftArrow && x > 0) x--;
-                    if (gomb == ConsoleKey.RightArrow && x < ww - 1) x++;
-
-                    if (gomb == ConsoleKey.Spacebar) break;
-                }
             }
 
             if (gomb == ConsoleKey.Escape)
             {
                 isRunning = false;
+                Console.Clear();
+                Console.WriteLine("Szeretnéd elmenteni a rajzot? (i/n)");
+                var saveKey = Console.ReadKey(true).Key;
+                if (saveKey == ConsoleKey.I)
+                {
+                    SaveDrawing(drawing);
+                }
             }
-
-            Console.SetCursorPosition(ww - 6, wh - 1);
-            Console.BackgroundColor = (x == ww - 6 && y == wh - 1) ? ConsoleColor.Gray : ConsoleColor.Black;
-            Console.ForegroundColor = (x == ww - 6 && y == wh - 1) ? ConsoleColor.Black : ConsoleColor.White;
-            Console.Write("Mentés");
-            Console.ResetColor();
 
             Console.SetCursorPosition(0, wh - 1);
             Console.ResetColor();
@@ -186,20 +179,111 @@ class Program
         } while (isRunning);
     }
 
-    static void SaveDrawing()
+    static void ContinueDrawing(char[,] drawing)
     {
-        Console.SetCursorPosition(30, Console.WindowHeight - 1);
-        Console.WriteLine("Mentve");
+        int x = 0, y = 0;
+        ConsoleKey gomb;
+        int ww = Console.WindowWidth;
+        int wh = Console.WindowHeight;
+        bool isRunning = true;
+        char currentChar = '█';
+        ConsoleColor currentColor = ConsoleColor.Gray;
 
-        using (StreamWriter writer = new StreamWriter("drawing.txt"))
+        // Display the loaded drawing
+        for (int i = 0; i < wh; i++)
         {
-            for (int i = 0; i < Console.WindowHeight; i++)
+            for (int j = 0; j < ww; j++)
             {
-                for (int j = 0; j < Console.WindowWidth; j++)
+                if (drawing[i, j] != ' ')
                 {
                     Console.SetCursorPosition(j, i);
-                    char c = (char)Console.Read();
-                    writer.Write(c);
+                    Console.Write(drawing[i, j]);
+                }
+            }
+        }
+
+        do
+        {
+            Console.SetCursorPosition(x, y);
+            gomb = Console.ReadKey(true).Key;
+
+            if (gomb == ConsoleKey.UpArrow && y > 0) y--;
+            if (gomb == ConsoleKey.DownArrow && y < wh - 1) y++;
+            if (gomb == ConsoleKey.LeftArrow && x > 0) x--;
+            if (gomb == ConsoleKey.RightArrow && x < ww - 1) x++;
+
+            switch (gomb)
+            {
+                case ConsoleKey.D1:
+                    currentColor = ConsoleColor.Red;
+                    Console.ForegroundColor = currentColor;
+                    break;
+
+                case ConsoleKey.D2:
+                    currentColor = ConsoleColor.Green;
+                    Console.ForegroundColor = currentColor;
+                    break;
+
+                case ConsoleKey.D3:
+                    currentColor = ConsoleColor.Blue;
+                    Console.ForegroundColor = currentColor;
+                    break;
+
+                case ConsoleKey.D4:
+                    currentColor = ConsoleColor.Gray;
+                    Console.ForegroundColor = currentColor;
+                    break;
+                case ConsoleKey.D5:
+                    currentChar = '▓';
+                    break;
+
+                case ConsoleKey.D6:
+                    currentChar = '▒';
+                    break;
+
+                case ConsoleKey.D7:
+                    currentChar = '░';
+                    break;
+
+                case ConsoleKey.D8:
+                    currentChar = '█';
+                    break;
+
+                case ConsoleKey.Spacebar:
+                    Console.SetCursorPosition(x, y);
+                    Console.Write(currentChar);
+                    drawing[y, x] = currentChar; // Save the character to the drawing array
+                    break;
+            }
+
+            if (gomb == ConsoleKey.Escape)
+            {
+                isRunning = false;
+                Console.Clear();
+                Console.WriteLine("Szeretnéd elmenteni a rajzot? (i/n)");
+                var saveKey = Console.ReadKey(true).Key;
+                if (saveKey == ConsoleKey.I)
+                {
+                    SaveDrawing(drawing);
+                }
+            }
+
+            Console.SetCursorPosition(0, wh - 1);
+            Console.ResetColor();
+            Console.Write($"Szín: {currentColor}, Karakter: {currentChar}   ");
+
+        } while (isRunning);
+    }
+
+    static void SaveDrawing(char[,] drawing)
+    {
+        using (StreamWriter writer = new StreamWriter("drawing.txt"))
+        {
+            for (int i = 0; i < drawing.GetLength(0); i++)
+            {
+                for (int j = 0; j < drawing.GetLength(1); j++)
+                {
+                    writer.Write(drawing[i, j]);
                 }
                 writer.WriteLine();
             }
@@ -209,25 +293,32 @@ class Program
         Console.WriteLine("Elmentve");
     }
 
-    static void LoadDrawing()
+    static char[,] LoadDrawing()
     {
         Console.Clear();
 
         if (File.Exists("drawing.txt"))
         {
             string[] buffer = File.ReadAllLines("drawing.txt");
-            for (int i = 0; i < buffer.Length; i++)
+            int wh = buffer.Length;
+            int ww = buffer[0].Length;
+            char[,] drawing = new char[wh, ww];
+
+            for (int i = 0; i < wh; i++)
             {
-                Console.SetCursorPosition(0, i);
-                Console.Write(buffer[i]);
+                for (int j = 0; j < ww; j++)
+                {
+                    drawing[i, j] = buffer[i][j];
+                }
             }
-            Console.WriteLine(" ");
+
             Console.WriteLine("Rajz betöltve.");
+            return drawing;
         }
         else
         {
             Console.WriteLine("Nincs mentett rajz.");
+            return null;
         }
-        Console.ReadKey();
     }
 }
