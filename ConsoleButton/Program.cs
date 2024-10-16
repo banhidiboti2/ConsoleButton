@@ -1,12 +1,13 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 class Program
 {
     static string saveDirectory = "rajzok";
     static string currentFilePath = "";
     static bool isNewDrawing = true;
-    static char[,] drawing;
+    static char[,] drawing = new char[Console.WindowHeight, Console.WindowWidth];
 
     static void Main()
     {
@@ -125,7 +126,6 @@ class Program
             Console.WriteLine("Törlés");
 
             Console.SetCursorPosition(0, topPadding);
-            
 
             for (int i = 0; i < files.Length; i++)
             {
@@ -314,23 +314,20 @@ class Program
             {
                 case ConsoleKey.D1:
                     currentColor = ConsoleColor.Red;
-                    Console.ForegroundColor = currentColor;
                     break;
 
                 case ConsoleKey.D2:
                     currentColor = ConsoleColor.Green;
-                    Console.ForegroundColor = currentColor;
                     break;
 
                 case ConsoleKey.D3:
                     currentColor = ConsoleColor.Blue;
-                    Console.ForegroundColor = currentColor;
                     break;
 
                 case ConsoleKey.D4:
                     currentColor = ConsoleColor.Gray;
-                    Console.ForegroundColor = currentColor;
                     break;
+
                 case ConsoleKey.D5:
                     currentChar = '▓';
                     break;
@@ -349,7 +346,9 @@ class Program
 
                 case ConsoleKey.Spacebar:
                     Console.SetCursorPosition(x, y);
+                    Console.ForegroundColor = currentColor;
                     Console.Write(currentChar);
+                    Console.ResetColor();
                     drawing[y, x] = currentChar;
                     break;
             }
@@ -365,7 +364,7 @@ class Program
                     if (isNewDrawing)
                     {
                         Console.WriteLine("Adj meg egy fájlnevet a mentéshez:");
-                        string fileName = Console.ReadLine();
+                        string fileName = Console.ReadLine() ?? "default";
                         currentFilePath = Path.Combine(saveDirectory, fileName + ".txt");
                     }
                     else
@@ -375,7 +374,7 @@ class Program
                         if (overwriteKey != ConsoleKey.N)
                         {
                             Console.WriteLine("Adj meg egy új fájlnevet:");
-                            string newFileName = Console.ReadLine();
+                            string newFileName = Console.ReadLine() ?? "default";
                             currentFilePath = Path.Combine(saveDirectory, newFileName + ".txt");
                         }
                     }
