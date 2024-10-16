@@ -4,13 +4,11 @@ using System.IO;
 class Program
 {
     static string saveDirectory = "rajzok";
-    static string currentFilePath = ""; // Store the file path of the currently loaded drawing
-    static bool isNewDrawing = true;    // Track whether it's a new drawing or loaded one
-    static char[,] drawing;             // Store the drawing
-
+    static string currentFilePath = ""; 
+    static bool isNewDrawing = true;    
+    static char[,] drawing;             
     static void Main()
     {
-        // Create save directory if it doesn't exist
         if (!Directory.Exists(saveDirectory))
         {
             Directory.CreateDirectory(saveDirectory);
@@ -76,21 +74,21 @@ class Program
                 case ConsoleKey.Enter:
                     Console.Clear();
                     Console.WriteLine($"Selected: {menuItems[selectedIndex]}");
-                    if (selectedIndex == 0) // New drawing
+                    if (selectedIndex == 0)
                     {
-                        isNewDrawing = true;  // Mark as a new drawing
-                        currentFilePath = ""; // Clear the current file path for a new drawing
+                        isNewDrawing = true;
+                        currentFilePath = "";
                         RunDrawingOption();
                     }
-                    else if (selectedIndex == 1) // Load saved drawing
+                    else if (selectedIndex == 1)
                     {
                         LoadDrawing();
                     }
-                    else if (selectedIndex == 2) // Delete drawing
+                    else if (selectedIndex == 2)
                     {
                         DeleteDrawing();
                     }
-                    else if (selectedIndex == 3) // Exit
+                    else if (selectedIndex == 3)
                     {
                         Environment.Exit(0);
                     }
@@ -212,7 +210,7 @@ class Program
                 case ConsoleKey.Spacebar:
                     Console.SetCursorPosition(x, y);
                     Console.Write(currentChar);
-                    drawing[y, x] = currentChar; // Save the drawn character in the array
+                    drawing[y, x] = currentChar; 
                     break;
             }
 
@@ -226,7 +224,6 @@ class Program
                 {
                     if (isNewDrawing)
                     {
-                        // Ask for a new filename if it's a new drawing
                         Console.WriteLine("Adj meg egy fájlnevet a mentéshez:");
                         string fileName = Console.ReadLine();
                         currentFilePath = Path.Combine(saveDirectory, fileName + ".txt");
@@ -259,7 +256,6 @@ class Program
         int wh = Console.WindowHeight;
         char[,] existingDrawing = new char[wh, ww];
 
-        // Initialize the existingDrawing array with blank spaces
         for (int i = 0; i < wh; i++)
         {
             for (int j = 0; j < ww; j++)
@@ -268,7 +264,6 @@ class Program
             }
         }
 
-        // Read the existing content if the file exists
         if (File.Exists(filePath))
         {
             string[] lines = File.ReadAllLines(filePath);
@@ -281,7 +276,6 @@ class Program
             }
         }
 
-        // Merge the existing content with the current drawing
         for (int i = 0; i < wh; i++)
         {
             for (int j = 0; j < ww; j++)
@@ -293,7 +287,6 @@ class Program
             }
         }
 
-        // Save the combined result back to the file
         using (StreamWriter writer = new StreamWriter(filePath))
         {
             for (int i = 0; i < wh; i++)
@@ -331,11 +324,10 @@ class Program
         Console.Write("Válassz egy rajzot (szám): ");
         if (int.TryParse(Console.ReadLine(), out int choice) && choice > 0 && choice <= files.Length)
         {
-            currentFilePath = files[choice - 1]; // Store the selected file's path
-            isNewDrawing = false; // Mark it as an existing drawing
+            currentFilePath = files[choice - 1]; 
+            isNewDrawing = false; 
             string[] lines = File.ReadAllLines(currentFilePath);
 
-            // Initialize the drawing array with the saved content
             int ww = Console.WindowWidth;
             int wh = Console.WindowHeight;
             drawing = new char[wh, ww];
@@ -347,14 +339,12 @@ class Program
                 }
             }
 
-            // Display the loaded drawing
+
             Console.Clear();
             for (int i = 0; i < Math.Min(wh, lines.Length); i++)
             {
                 Console.WriteLine(lines[i]);
             }
-
-            // Allow the user to continue editing the loaded drawing
             RunDrawingOption();
         }
         else
