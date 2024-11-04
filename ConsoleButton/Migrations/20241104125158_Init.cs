@@ -58,6 +58,7 @@ namespace ConsoleButton.Migrations
 
             migrationBuilder.DropTable(
                 name: "Drawings");
+
         }
     }
 }
