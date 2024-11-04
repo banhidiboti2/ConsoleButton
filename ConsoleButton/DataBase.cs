@@ -66,6 +66,7 @@ class DrawingProgram
                     Console.WriteLine($"  Point: ({p.X}, {p.Y})");
                 }
             }
+
         }
     }
 }
