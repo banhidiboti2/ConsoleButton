@@ -1,11 +1,16 @@
-﻿class Program
+﻿using System;
+using System.Collections.Generic;
+using System.Data.SQLite;
+using System.IO;
+using System.Linq;
+
+class Program
 {
     static string saveDirectory = "rajzok";
     static char[,] drawing = new char[Console.WindowHeight, Console.WindowWidth];
     static string currentFilePath = "";
     static bool isNewDrawing = true;
 
-    
     public class DrawingElement
     {
         public int X { get; set; }
@@ -14,14 +19,22 @@
         public char Character { get; set; }
     }
 
+    static ConsoleColor[,] colorDrawing = new ConsoleColor[Console.WindowHeight, Console.WindowWidth];
+
+    static string connectionString = "Data Source=drawingDatabase.db;Version=3;";
+
+
     static void Main()
     {
-        Console.WriteLine("Hello World");
 
+        
         if (!Directory.Exists(saveDirectory))
         {
             Directory.CreateDirectory(saveDirectory);
         }
+
+        InitializeDatabase();
+        //SaveDrawingToDatabase("SampleDrawing");
 
         string[] menuItems = { " Új Rajz", "Rajz Szerkesztés", "Törlés", "Kilépés" };
         int selectedIndex = 0;
@@ -97,6 +110,46 @@
                     break;
             }
         } while (true);
+    }
+
+
+    static void InitializeDatabase()
+    {
+        if (!File.Exists("drawingDatabase.db"))
+        {
+            SQLiteConnection.CreateFile("drawingDatabase.db");
+
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+                string createDrawingsTable = @"
+                    CREATE TABLE IF NOT EXISTS Drawings (
+                        DrawingID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Name TEXT UNIQUE NOT NULL
+                    );";
+
+                string createPointsTable = @"
+                    CREATE TABLE IF NOT EXISTS Points (
+                        PointID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        DrawingID INTEGER NOT NULL,
+                        X INTEGER NOT NULL,
+                        Y INTEGER NOT NULL,
+                        Color TEXT NOT NULL,
+                        Character TEXT NOT NULL,
+                        FOREIGN KEY (DrawingID) REFERENCES Drawings(DrawingID)
+                    );";
+
+                using (var command = new SQLiteCommand(createDrawingsTable, connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+
+                using (var command = new SQLiteCommand(createPointsTable, connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
     }
 
     static void DeleteDrawing()
@@ -262,23 +315,20 @@
         } while (true);
     }
 
-
-
-
     static void LoadDrawingFromFile(string filePath)
     {
         string[] lines = File.ReadAllLines(filePath);
         int ww = Console.WindowWidth;
         int wh = Console.WindowHeight;
         drawing = new char[wh, ww];
-        ConsoleColor[,] colors = new ConsoleColor[wh, ww];
+        colorDrawing = new ConsoleColor[wh, ww];
 
         for (int i = 0; i < wh; i++)
         {
             for (int j = 0; j < ww; j++)
             {
                 drawing[i, j] = ' ';
-                colors[i, j] = ConsoleColor.Gray;
+                colorDrawing[i, j] = ConsoleColor.Gray;
             }
         }
 
@@ -287,39 +337,63 @@
             var parts = line.Split(',');
             int x = int.Parse(parts[0]);
             int y = int.Parse(parts[1]);
-            ConsoleColor color = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), parts[2]);
+            ConsoleColor color;
+            Enum.TryParse(parts[2], out color);
             char character = parts[3][0];
 
             drawing[y, x] = character;
-            colors[y, x] = color;
-        }
+            colorDrawing[y, x] = color;
 
-        DisplayDrawing(colors);
+            Console.SetCursorPosition(x, y);
+            Console.ForegroundColor = color;
+            Console.Write(character);
+            Console.ResetColor();
+        }
     }
 
-    static void DisplayDrawing(ConsoleColor[,] colors)
+    static void DisplayDrawing(string drawingName)
     {
         Console.Clear();
+
         int ww = Console.WindowWidth;
         int wh = Console.WindowHeight;
 
-        for (int i = 0; i < wh; i++)
+        using (var connection = new SQLiteConnection(connectionString))
         {
-            for (int j = 0; j < ww; j++)
+            connection.Open();
+
+            int drawingID;
+            using (var command = new SQLiteCommand("SELECT DrawingID FROM Drawings WHERE Name = @Name;", connection))
             {
-                if (drawing[i, j] != ' ')
+                command.Parameters.AddWithValue("@Name", drawingName);
+                drawingID = Convert.ToInt32(command.ExecuteScalar());
+            }
+
+            using (var command = new SQLiteCommand("SELECT X, Y, Color, Character FROM Points WHERE DrawingID = @DrawingID;", connection))
+            {
+                command.Parameters.AddWithValue("@DrawingID", drawingID);
+                using (var reader = command.ExecuteReader())
                 {
-                    Console.SetCursorPosition(j, i);
-                    Console.ForegroundColor = colors[i, j];
-                    Console.Write(drawing[i, j]);
+                    while (reader.Read())
+                    {
+                        int x = reader.GetInt32(0);
+                        int y = reader.GetInt32(1);
+                        ConsoleColor color = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), reader.GetString(2));
+                        char character = reader.GetString(3)[0];
+
+                        Console.SetCursorPosition(x, y);
+                        Console.ForegroundColor = color;
+                        Console.Write(character);
+                    }
                 }
             }
-        }
 
-        Console.SetCursorPosition(0, wh - 1);
-        Console.ResetColor();
-        Console.ReadKey();
+            Console.ResetColor();
+            Console.SetCursorPosition(0, wh - 1);
+            Console.ReadKey();
+        }
     }
+
 
     static void RunDrawingOption()
     {
@@ -344,7 +418,7 @@
         }
         else
         {
-            DisplayDrawing(new ConsoleColor[Console.WindowHeight, Console.WindowWidth]); 
+            DisplayDrawing(currentFilePath); 
         }
 
         do
@@ -397,6 +471,7 @@
                     Console.Write(currentChar);
                     Console.ResetColor();
                     drawing[y, x] = currentChar;
+                    colorDrawing[y, x] = currentColor;
                     break;
             }
 
@@ -422,6 +497,78 @@
     }
 
 
+
+    static void SaveDrawingToDatabase(string drawingName)
+    {
+        using (var connection = new SQLiteConnection(connectionString))
+        {
+            connection.Open();
+            Console.WriteLine("Adatbázis kapcsolat létrejött.");
+
+            int drawingID;
+
+            using (var insertDrawingCommand = new SQLiteCommand("INSERT OR IGNORE INTO Drawings (Name) VALUES (@Name);", connection))
+            {
+                insertDrawingCommand.Parameters.AddWithValue("@Name", drawingName);
+                insertDrawingCommand.ExecuteNonQuery();
+                Console.WriteLine("Rajz hozzáadása (ha még nem létezik).");
+            }
+
+            using (var selectDrawingCommand = new SQLiteCommand("SELECT DrawingID FROM Drawings WHERE Name = @Name;", connection))
+            {
+                selectDrawingCommand.Parameters.AddWithValue("@Name", drawingName);
+                drawingID = Convert.ToInt32(selectDrawingCommand.ExecuteScalar());
+                Console.WriteLine("Rajz ID lekérve: " + drawingID);
+            }
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                using (var deletePointsCommand = new SQLiteCommand("DELETE FROM Points WHERE DrawingID = @DrawingID;", connection))
+                {
+                    deletePointsCommand.Parameters.AddWithValue("@DrawingID", drawingID);
+                    deletePointsCommand.ExecuteNonQuery();
+                    Console.WriteLine("Előző pontok törölve.");
+                }
+
+                using (var insertPointCommand = new SQLiteCommand(
+                    "INSERT INTO Points (DrawingID, X, Y, Color, Character) VALUES (@DrawingID, @X, @Y, @Color, @Character);", connection))
+                {
+                    insertPointCommand.Parameters.AddWithValue("@DrawingID", drawingID);
+
+                    for (int y = 0; y < Console.WindowHeight; y++)
+                    {
+                        for (int x = 0; x < Console.WindowWidth; x++)
+                        {
+                            char character = drawing[y, x];
+                            ConsoleColor color = colorDrawing[y, x];
+
+                            if (character != ' ')
+                            {
+                                insertPointCommand.Parameters.AddWithValue("@X", x);
+                                insertPointCommand.Parameters.AddWithValue("@Y", y);
+                                insertPointCommand.Parameters.AddWithValue("@Color", color.ToString());
+                                insertPointCommand.Parameters.AddWithValue("@Character", character.ToString());
+
+                                insertPointCommand.ExecuteNonQuery();
+                                Console.WriteLine($"Pont mentve: RajzID={drawingID}, X={x}, Y={y}, Szín={color}, Karakter={character}");
+
+                                insertPointCommand.Parameters.Clear();
+                                insertPointCommand.Parameters.AddWithValue("@DrawingID", drawingID);
+                            }
+                        }
+                    }
+                }
+
+                transaction.Commit();
+                Console.WriteLine("Minden pont elmentve és tranzakció lezárva.");
+            }
+        }
+        Console.WriteLine($"Rajz mentve az adatbázisba: {drawingName}");
+    }
+
+
+
+
     static void SaveDrawing(string filePath)
     {
         int ww = Console.WindowWidth;
@@ -439,7 +586,7 @@
                     {
                         X = j,
                         Y = i,
-                        Color = Console.ForegroundColor, 
+                        Color = colorDrawing[i, j], 
                         Character = drawing[i, j]
                     });
                 }
@@ -457,6 +604,6 @@
         Console.WriteLine($"Rajz elmentve: {filePath}");
     }
 
-    
 
+ 
 }
