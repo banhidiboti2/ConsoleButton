@@ -1,16 +1,23 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-
-class Program
+﻿class Program
 {
     static string saveDirectory = "rajzok";
+    static char[,] drawing = new char[Console.WindowHeight, Console.WindowWidth];
     static string currentFilePath = "";
     static bool isNewDrawing = true;
-    static char[,] drawing = new char[Console.WindowHeight, Console.WindowWidth];
+
+    
+    public class DrawingElement
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public ConsoleColor Color { get; set; }
+        public char Character { get; set; }
+    }
 
     static void Main()
     {
+        Console.WriteLine("Hello World");
+
         if (!Directory.Exists(saveDirectory))
         {
             Directory.CreateDirectory(saveDirectory);
@@ -19,14 +26,7 @@ class Program
         string[] menuItems = { " Új Rajz", "Rajz Szerkesztés", "Törlés", "Kilépés" };
         int selectedIndex = 0;
 
-        int maxLength = 0;
-        foreach (var item in menuItems)
-        {
-            if (item.Length > maxLength)
-            {
-                maxLength = item.Length;
-            }
-        }
+        int maxLength = menuItems.Max(item => item.Length);
 
         do
         {
@@ -112,7 +112,7 @@ class Program
         }
 
         int selectedIndex = 0;
-        int maxLength = files.Length > 0 ? files.Max(f => Path.GetFileNameWithoutExtension(f).Length) : 0;
+        int maxLength = files.Max(f => Path.GetFileNameWithoutExtension(f).Length);
 
         do
         {
@@ -120,11 +120,9 @@ class Program
             int windowWidth = Console.WindowWidth;
             int windowHeight = Console.WindowHeight;
             int padding = (windowWidth - maxLength - 6) / 2;
-            int topPadding = (windowHeight - (files.Length * 3)) / 2;
+            int topPadding = Math.Max(0, (windowHeight - (files.Length * 3)) / 2);
 
-            Console.SetCursorPosition((windowWidth - "Törlés".Length) / 2, topPadding - 2);
-            Console.WriteLine("Törlés");
-
+            Console.SetCursorPosition((windowWidth - "Törlés".Length) / 2, Math.Max(0, topPadding - 2));
             Console.SetCursorPosition(0, topPadding);
 
             for (int i = 0; i < files.Length; i++)
@@ -203,7 +201,7 @@ class Program
         }
 
         int selectedIndex = 0;
-        int maxLength = files.Length > 0 ? files.Max(f => Path.GetFileNameWithoutExtension(f).Length) : 0;
+        int maxLength = files.Max(f => Path.GetFileNameWithoutExtension(f).Length);
 
         do
         {
@@ -211,9 +209,9 @@ class Program
             int windowWidth = Console.WindowWidth;
             int windowHeight = Console.WindowHeight;
             int padding = (windowWidth - maxLength - 6) / 2;
-            int topPadding = (windowHeight - (files.Length * 3)) / 2;
+            int topPadding = Math.Max(0, (windowHeight - (files.Length * 3)) / 2);
 
-            Console.SetCursorPosition((windowWidth - "Mentett rajzok".Length) / 2, topPadding - 2);
+            Console.SetCursorPosition((windowWidth - "Mentett rajzok".Length) / 2, Math.Max(0, topPadding - 2));
             Console.WriteLine("Mentett rajzok:");
 
             for (int i = 0; i < files.Length; i++)
@@ -254,31 +252,73 @@ class Program
                 case ConsoleKey.Enter:
                     currentFilePath = files[selectedIndex];
                     isNewDrawing = false;
-                    string[] lines = File.ReadAllLines(currentFilePath);
-
-                    int ww = Console.WindowWidth;
-                    int wh = Console.WindowHeight;
-                    drawing = new char[wh, ww];
-                    for (int i = 0; i < Math.Min(wh, lines.Length); i++)
-                    {
-                        for (int j = 0; j < Math.Min(ww, lines[i].Length); j++)
-                        {
-                            drawing[i, j] = lines[i][j];
-                        }
-                    }
-
-                    Console.Clear();
-                    for (int i = 0; i < Math.Min(wh, lines.Length); i++)
-                    {
-                        Console.WriteLine(lines[i]);
-                    }
-                    RunDrawingOption();
+                    LoadDrawingFromFile(currentFilePath);
+                    RunDrawingOption(); 
                     return;
 
                 case ConsoleKey.Escape:
                     return;
             }
         } while (true);
+    }
+
+
+
+
+    static void LoadDrawingFromFile(string filePath)
+    {
+        string[] lines = File.ReadAllLines(filePath);
+        int ww = Console.WindowWidth;
+        int wh = Console.WindowHeight;
+        drawing = new char[wh, ww];
+        ConsoleColor[,] colors = new ConsoleColor[wh, ww];
+
+        for (int i = 0; i < wh; i++)
+        {
+            for (int j = 0; j < ww; j++)
+            {
+                drawing[i, j] = ' ';
+                colors[i, j] = ConsoleColor.Gray;
+            }
+        }
+
+        foreach (var line in lines)
+        {
+            var parts = line.Split(',');
+            int x = int.Parse(parts[0]);
+            int y = int.Parse(parts[1]);
+            ConsoleColor color = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), parts[2]);
+            char character = parts[3][0];
+
+            drawing[y, x] = character;
+            colors[y, x] = color;
+        }
+
+        DisplayDrawing(colors);
+    }
+
+    static void DisplayDrawing(ConsoleColor[,] colors)
+    {
+        Console.Clear();
+        int ww = Console.WindowWidth;
+        int wh = Console.WindowHeight;
+
+        for (int i = 0; i < wh; i++)
+        {
+            for (int j = 0; j < ww; j++)
+            {
+                if (drawing[i, j] != ' ')
+                {
+                    Console.SetCursorPosition(j, i);
+                    Console.ForegroundColor = colors[i, j];
+                    Console.Write(drawing[i, j]);
+                }
+            }
+        }
+
+        Console.SetCursorPosition(0, wh - 1);
+        Console.ResetColor();
+        Console.ReadKey();
     }
 
     static void RunDrawingOption()
@@ -291,13 +331,20 @@ class Program
         char currentChar = '█';
         ConsoleColor currentColor = ConsoleColor.Gray;
 
-        drawing = new char[wh, ww];
-        for (int i = 0; i < wh; i++)
+        if (isNewDrawing)
         {
-            for (int j = 0; j < ww; j++)
+            drawing = new char[wh, ww];
+            for (int i = 0; i < wh; i++)
             {
-                drawing[i, j] = ' ';
+                for (int j = 0; j < ww; j++)
+                {
+                    drawing[i, j] = ' ';
+                }
             }
+        }
+        else
+        {
+            DisplayDrawing(new ConsoleColor[Console.WindowHeight, Console.WindowWidth]); 
         }
 
         do
@@ -361,24 +408,9 @@ class Program
                 var saveKey = Console.ReadKey(true).Key;
                 if (saveKey == ConsoleKey.I)
                 {
-                    if (isNewDrawing)
-                    {
-                        Console.WriteLine("Adj meg egy fájlnevet a mentéshez:");
-                        string fileName = Console.ReadLine() ?? "default";
-                        currentFilePath = Path.Combine(saveDirectory, fileName + ".txt");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Szeretnéd csak a mostani munkádat elmenteni? (i/n)");
-                        var overwriteKey = Console.ReadKey(true).Key;
-                        if (overwriteKey != ConsoleKey.N)
-                        {
-                            Console.WriteLine("Adj meg egy új fájlnevet:");
-                            string newFileName = Console.ReadLine() ?? "default";
-                            currentFilePath = Path.Combine(saveDirectory, newFileName + ".txt");
-                        }
-                    }
-                    SaveDrawing(currentFilePath);
+                    Console.WriteLine("Adj meg egy fájlnevet a mentéshez:");
+                    string fileName = Console.ReadLine() ?? "default";
+                    SaveDrawing(Path.Combine(saveDirectory, fileName + ".txt"));
                 }
             }
 
@@ -389,56 +421,42 @@ class Program
         } while (isRunning);
     }
 
+
     static void SaveDrawing(string filePath)
     {
         int ww = Console.WindowWidth;
         int wh = Console.WindowHeight;
-        char[,] existingDrawing = new char[wh, ww];
+
+        List<DrawingElement> elements = new List<DrawingElement>();
 
         for (int i = 0; i < wh; i++)
         {
             for (int j = 0; j < ww; j++)
             {
-                existingDrawing[i, j] = ' ';
-            }
-        }
-
-        if (File.Exists(filePath))
-        {
-            string[] lines = File.ReadAllLines(filePath);
-            for (int i = 0; i < Math.Min(wh, lines.Length); i++)
-            {
-                for (int j = 0; j < Math.Min(ww, lines[i].Length); j++)
+                if (drawing[i, j] != ' ') 
                 {
-                    existingDrawing[i, j] = lines[i][j];
-                }
-            }
-        }
-
-        for (int i = 0; i < wh; i++)
-        {
-            for (int j = 0; j < ww; j++)
-            {
-                if (drawing[i, j] != ' ')
-                {
-                    existingDrawing[i, j] = drawing[i, j];
+                    elements.Add(new DrawingElement
+                    {
+                        X = j,
+                        Y = i,
+                        Color = Console.ForegroundColor, 
+                        Character = drawing[i, j]
+                    });
                 }
             }
         }
 
         using (StreamWriter writer = new StreamWriter(filePath))
         {
-            for (int i = 0; i < wh; i++)
+            foreach (var element in elements)
             {
-                for (int j = 0; j < ww; j++)
-                {
-                    writer.Write(existingDrawing[i, j]);
-                }
-                writer.WriteLine();
+                writer.WriteLine($"{element.X},{element.Y},{element.Color},{element.Character}");
             }
         }
 
         Console.WriteLine($"Rajz elmentve: {filePath}");
-        Console.ReadKey();
     }
+
+    
+
 }
